@@ -6,6 +6,8 @@ import { useBridge } from './lib/bridge-hooks'
 import { AuthView } from './components/auth-view'
 import { ProjectManager } from './components/project-manager'
 import { LogExplorer } from './components/log-explorer'
+import { ErrorMonitor } from './components/error-monitor'
+import { MetricsDashboard } from './components/metrics-dashboard'
 import { MetricCard } from '@/components/metric-card'
 import { StatusBadge } from '@/components/status-badge'
 import { InfoTable } from '@/components/info-table'
@@ -279,31 +281,11 @@ function App() {
           )}
 
           {activeTab === 'errors' && selectedProject && (
-            <Card className="border-border/80 bg-card/50">
-              <CardHeader>
-                <CardTitle className="text-lg font-bold">Error Monitor</CardTitle>
-                <CardDescription>
-                  Group exceptions and inspect application crashes for {selectedProject.name}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="py-12 text-center text-muted-foreground italic text-sm">
-                Exception intelligence and grouping monitor will load in Part 6.
-              </CardContent>
-            </Card>
+            <ErrorMonitor selectedProject={selectedProject} />
           )}
 
           {activeTab === 'metrics' && selectedProject && (
-            <Card className="border-border/80 bg-card/50">
-              <CardHeader>
-                <CardTitle className="text-lg font-bold">Metrics Dashboard</CardTitle>
-                <CardDescription>
-                  Analyze resource usage and CPU/memory metric curves for {selectedProject.name}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="py-12 text-center text-muted-foreground italic text-sm">
-                Resource metrics monitoring and custom dashboards will load in Part 6.
-              </CardContent>
-            </Card>
+            <MetricsDashboard selectedProject={selectedProject} />
           )}
 
           {activeTab === 'system' && (
