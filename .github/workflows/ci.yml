@@ -81,10 +81,3 @@ jobs:
           make build
         env:
           VERSION: "ci-${{ github.sha }}"
-
-      - name: Upload Binary Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: go-starter-kit-linux-amd64
-          path: bin/go-starter-kit
-          retention-days: 7
