@@ -50,6 +50,9 @@ function App() {
   const [dark, toggleTheme] = useTheme()
   const [user, setUser] = useState<any>(null)
   const [checkingAuth, setCheckingAuth] = useState(true)
+  const [activeTab, setActiveTab] = useState<'projects' | 'logs' | 'errors' | 'metrics' | 'system'>('projects')
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null)
+  const [projects, setProjects] = useState<Project[]>([])
   const [showLanding, setShowLanding] = useState(() => {
     return !localStorage.getItem('token')
   })
@@ -152,11 +155,7 @@ function App() {
     )
   }
 
-  const [activeTab, setActiveTab] = useState<'projects' | 'logs' | 'errors' | 'metrics' | 'system'>('projects')
-  const [selectedProject, setSelectedProject] = useState<Project | null>(null)
-  const [projects, setProjects] = useState<Project[]>([])
-
-  return (
+    return (
     <div className="min-h-screen">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
         {/* Header */}
