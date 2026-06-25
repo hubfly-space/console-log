@@ -3,14 +3,18 @@ package handler
 import (
 	"net/http"
 	"time"
+
+	"github.com/bonheur/go-starter-kit/internal/database"
 )
 
 // APIHandler provides sample API endpoints.
-type APIHandler struct{}
+type APIHandler struct {
+	db *database.DB
+}
 
 // NewAPIHandler creates a new API handler.
-func NewAPIHandler() *APIHandler {
-	return &APIHandler{}
+func NewAPIHandler(db *database.DB) *APIHandler {
+	return &APIHandler{db: db}
 }
 
 // HandleHello is a sample endpoint: GET /api/hello

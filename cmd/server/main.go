@@ -52,7 +52,7 @@ func main() {
 	}
 
 	// Create router
-	handler := router.New(cfg, logger)
+	handler := router.New(cfg, logger, db)
 
 	// Wrap with frontend serving if embedded and enabled
 	if cfg.ServeFrontend && frontendFS != nil {
