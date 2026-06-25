@@ -102,4 +102,76 @@ var DefaultMigrations = []Migration{
 			CREATE INDEX IF NOT EXISTS idx_events_error_group ON events(error_group);
 		`,
 	},
+	{
+		Version: 8,
+		Name:    "create_observability_tables",
+		Up: `
+			CREATE INDEX IF NOT EXISTS idx_events_project_type_timestamp ON events(project_id, type, timestamp DESC);
+			CREATE INDEX IF NOT EXISTS idx_events_stream_type_timestamp ON events(stream_id, type, timestamp DESC);
+
+			CREATE TABLE IF NOT EXISTS dashboards (
+				id         INTEGER PRIMARY KEY AUTOINCREMENT,
+				project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+				name       TEXT    NOT NULL,
+				layout     TEXT    NOT NULL DEFAULT '[]',
+				created_at TEXT    NOT NULL DEFAULT (datetime('now'))
+			);
+			CREATE INDEX IF NOT EXISTS idx_dashboards_project_id ON dashboards(project_id);
+
+			CREATE TABLE IF NOT EXISTS alert_rules (
+				id               INTEGER PRIMARY KEY AUTOINCREMENT,
+				project_id       INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+				name             TEXT    NOT NULL,
+				metric_type      TEXT    NOT NULL,
+				threshold        REAL    NOT NULL,
+				comparison       TEXT    NOT NULL,
+				time_window_mins INTEGER NOT NULL DEFAULT 5,
+				channel          TEXT    NOT NULL DEFAULT 'email',
+				target           TEXT    NOT NULL,
+				active           INTEGER NOT NULL DEFAULT 1,
+				created_at       TEXT    NOT NULL DEFAULT (datetime('now'))
+			);
+			CREATE INDEX IF NOT EXISTS idx_alert_rules_project_id ON alert_rules(project_id);
+
+			CREATE TABLE IF NOT EXISTS alerts_history (
+				id               INTEGER PRIMARY KEY AUTOINCREMENT,
+				rule_id          INTEGER NOT NULL REFERENCES alert_rules(id) ON DELETE CASCADE,
+				project_id       INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+				triggered_value  REAL    NOT NULL,
+				triggered_at     TEXT    NOT NULL DEFAULT (datetime('now'))
+			);
+			CREATE INDEX IF NOT EXISTS idx_alerts_history_project_id ON alerts_history(project_id);
+			CREATE INDEX IF NOT EXISTS idx_alerts_history_rule_id ON alerts_history(rule_id);
+
+			CREATE TABLE IF NOT EXISTS audit_logs (
+				id         INTEGER PRIMARY KEY AUTOINCREMENT,
+				user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+				action     TEXT    NOT NULL,
+				details    TEXT    NOT NULL DEFAULT '',
+				created_at TEXT    NOT NULL DEFAULT (datetime('now'))
+			);
+			CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON audit_logs(user_id);
+
+			CREATE TABLE IF NOT EXISTS incidents (
+				id          INTEGER PRIMARY KEY AUTOINCREMENT,
+				project_id  INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+				title       TEXT    NOT NULL,
+				status      TEXT    NOT NULL DEFAULT 'open',
+				severity    TEXT    NOT NULL DEFAULT 'info',
+				description TEXT    NOT NULL DEFAULT '',
+				created_at  TEXT    NOT NULL DEFAULT (datetime('now')),
+				resolved_at TEXT
+			);
+			CREATE INDEX IF NOT EXISTS idx_incidents_project_id ON incidents(project_id);
+
+			CREATE TABLE IF NOT EXISTS incident_updates (
+				id          INTEGER PRIMARY KEY AUTOINCREMENT,
+				incident_id INTEGER NOT NULL REFERENCES incidents(id) ON DELETE CASCADE,
+				message     TEXT    NOT NULL,
+				status      TEXT    NOT NULL,
+				created_at  TEXT    NOT NULL DEFAULT (datetime('now'))
+			);
+			CREATE INDEX IF NOT EXISTS idx_incident_updates_incident_id ON incident_updates(incident_id);
+		`,
+	},
 }
