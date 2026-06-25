@@ -34,16 +34,28 @@ export function useBridge<P extends BridgeProcedures>(
     onError,
   } = options;
 
-  const [data, setData] = useState<Output | null>(null);
-  const [error, setError] = useState<Error | null>(null);
-  const [loading, setLoading] = useState(enabled);
-  
   // Simple global cache
-  const cache = useRef<Map<string, any>>((useBridge as any).cache || ((useBridge as any).cache = new Map()));
+  const cacheMap = (useBridge as any).cache || ((useBridge as any).cache = new Map());
+  const cache = useRef<Map<string, any>>(cacheMap);
   const key = cacheKey || `${String(procedure)}-${JSON.stringify(input)}`;
 
-  const execute = useCallback(async (overrides: Partial<Parameters<BridgeClient[P]>[0]> = {}) => {
-    setLoading(true);
+  const cachedData = cacheMap.get(key);
+
+  const [data, setData] = useState<Output | null>(cachedData !== undefined ? cachedData : null);
+  const [error, setError] = useState<Error | null>(null);
+  const [loading, setLoading] = useState(() => {
+    if (!enabled) return false;
+    return cachedData === undefined;
+  });
+
+  const execute = useCallback(async (
+    overrides: Partial<Parameters<BridgeClient[P]>[0]> = {},
+    execOptions?: { silent?: boolean }
+  ) => {
+    const silent = execOptions?.silent ?? false;
+    if (!silent) {
+      setLoading(true);
+    }
     setError(null);
     try {
       // @ts-ignore - dynamic access
@@ -65,18 +77,19 @@ export function useBridge<P extends BridgeProcedures>(
   useEffect(() => {
     if (!enabled) return;
 
-    const cachedData = cache.current.get(key);
-    if (cachedData) {
-      setData(cachedData);
+    const currentCached = cache.current.get(key);
+    if (currentCached !== undefined) {
+      setData(currentCached);
       if (revalidateOnMount) {
-        execute();
+        execute({}, { silent: true });
       } else {
         setLoading(false);
       }
     } else {
       execute();
     }
-  }, [enabled, key]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled, key, revalidateOnMount]);
 
   return { data, error, loading, refetch: execute };
 }
