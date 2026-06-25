@@ -8,6 +8,7 @@ import { ProjectManager } from './components/project-manager'
 import { LogExplorer } from './components/log-explorer'
 import { ErrorMonitor } from './components/error-monitor'
 import { MetricsDashboard } from './components/metrics-dashboard'
+import { LandingPage } from './components/landing-page'
 import { MetricCard } from '@/components/metric-card'
 import { StatusBadge } from '@/components/status-badge'
 import { InfoTable } from '@/components/info-table'
@@ -49,6 +50,9 @@ function App() {
   const [dark, toggleTheme] = useTheme()
   const [user, setUser] = useState<any>(null)
   const [checkingAuth, setCheckingAuth] = useState(true)
+  const [showLanding, setShowLanding] = useState(() => {
+    return !localStorage.getItem('token')
+  })
   const [helloName, setHelloName] = useState('World')
 
   useEffect(() => {
@@ -66,6 +70,7 @@ function App() {
       .then(res => {
         if (res.success) {
           setUser(res.user)
+          setShowLanding(false)
         } else {
           localStorage.removeItem('token')
         }
@@ -101,8 +106,15 @@ function App() {
     )
   }
 
+  if (showLanding && !user) {
+    return <LandingPage onEnterApp={() => setShowLanding(false)} />
+  }
+
   if (!user) {
-    return <AuthView onAuthSuccess={(u) => setUser(u)} />
+    return <AuthView onAuthSuccess={(u) => {
+      setUser(u)
+      setShowLanding(false)
+    }} />
   }
 
   if (loading) {
@@ -175,6 +187,7 @@ function App() {
               }
               localStorage.removeItem('token');
               setUser(null);
+              setShowLanding(true);
             }}>
               <LogOut className="h-3.5 w-3.5" />
               Logout
