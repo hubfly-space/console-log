@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -447,29 +448,499 @@ func (a *APIHandler) ListStreams(ctx context.Context, in ListStreamsInput) (List
 	return ListStreamsOutput{Streams: streams}, nil
 }
 
-// --- Query Event Stubs (Implemented in Part 5 & Part 6) ---
+// --- Query Event Implementations ---
 
+// QueryLogs filters and searches log/error events.
 func (a *APIHandler) QueryLogs(ctx context.Context, in QueryLogsInput) (QueryLogsOutput, error) {
-	return QueryLogsOutput{Logs: []LogEvent{}}, nil
+	_, _, ok := middleware.GetUserFromContext(ctx)
+	if !ok {
+		return QueryLogsOutput{}, fmt.Errorf("unauthorized")
+	}
+
+	queryStr := "SELECT id, project_id, stream_id, type, timestamp, level, message, payload FROM events WHERE project_id = ? AND type IN ('log', 'error')"
+	args := []any{in.ProjectID}
+
+	if in.StreamID != nil {
+		queryStr += " AND stream_id = ?"
+		args = append(args, *in.StreamID)
+	}
+
+	if len(in.Levels) > 0 {
+		queryStr += " AND level IN ("
+		for i, lvl := range in.Levels {
+			if i > 0 {
+				queryStr += ","
+			}
+			queryStr += "?"
+			args = append(args, lvl)
+		}
+		queryStr += ")"
+	}
+
+	if in.StartTime != "" {
+		queryStr += " AND timestamp >= ?"
+		args = append(args, in.StartTime)
+	}
+	if in.EndTime != "" {
+		queryStr += " AND timestamp <= ?"
+		args = append(args, in.EndTime)
+	}
+
+	if in.Query != "" {
+		queryStr += " AND (message LIKE ? OR payload LIKE ?)"
+		args = append(args, "%"+in.Query+"%", "%"+in.Query+"%")
+	}
+
+	queryStr += " ORDER BY timestamp DESC LIMIT ? OFFSET ?"
+	limit := in.Limit
+	if limit <= 0 {
+		limit = 100
+	}
+	args = append(args, limit, in.Offset)
+
+	rows, err := a.db.QueryContext(ctx, queryStr, args...)
+	if err != nil {
+		return QueryLogsOutput{}, fmt.Errorf("failed to query logs: %w", err)
+	}
+	defer rows.Close()
+
+	var logs []LogEvent
+	for rows.Next() {
+		var ev LogEvent
+		var payloadStr string
+		var streamIDVal sql.NullInt64
+
+		err := rows.Scan(
+			&ev.ID,
+			&ev.ProjectID,
+			&streamIDVal,
+			&ev.Type,
+			&ev.Timestamp,
+			&ev.Level,
+			&ev.Message,
+			&payloadStr,
+		)
+		if err != nil {
+			return QueryLogsOutput{}, fmt.Errorf("failed to scan log event: %w", err)
+		}
+
+		if streamIDVal.Valid {
+			idVal := int(streamIDVal.Int64)
+			ev.StreamID = &idVal
+		}
+
+		ev.Payload = make(map[string]any)
+		_ = json.Unmarshal([]byte(payloadStr), &ev.Payload)
+
+		logs = append(logs, ev)
+	}
+
+	if logs == nil {
+		logs = []LogEvent{}
+	}
+
+	return QueryLogsOutput{Logs: logs}, nil
 }
 
+// GetLogHistogram aggregates log frequencies into 20 time-buckets.
 func (a *APIHandler) GetLogHistogram(ctx context.Context, in GetLogHistogramInput) (GetLogHistogramOutput, error) {
-	return GetLogHistogramOutput{Buckets: []HistogramBucket{}}, nil
+	_, _, ok := middleware.GetUserFromContext(ctx)
+	if !ok {
+		return GetLogHistogramOutput{}, fmt.Errorf("unauthorized")
+	}
+
+	queryStr := "SELECT timestamp FROM events WHERE project_id = ? AND type IN ('log', 'error')"
+	args := []any{in.ProjectID}
+
+	if in.StreamID != nil {
+		queryStr += " AND stream_id = ?"
+		args = append(args, *in.StreamID)
+	}
+
+	if len(in.Levels) > 0 {
+		queryStr += " AND level IN ("
+		for i, lvl := range in.Levels {
+			if i > 0 {
+				queryStr += ","
+			}
+			queryStr += "?"
+			args = append(args, lvl)
+		}
+		queryStr += ")"
+	}
+
+	if in.StartTime != "" {
+		queryStr += " AND timestamp >= ?"
+		args = append(args, in.StartTime)
+	}
+	if in.EndTime != "" {
+		queryStr += " AND timestamp <= ?"
+		args = append(args, in.EndTime)
+	}
+
+	if in.Query != "" {
+		queryStr += " AND (message LIKE ? OR payload LIKE ?)"
+		args = append(args, "%"+in.Query+"%", "%"+in.Query+"%")
+	}
+
+	rows, err := a.db.QueryContext(ctx, queryStr, args...)
+	if err != nil {
+		return GetLogHistogramOutput{}, fmt.Errorf("failed to query log timestamps: %w", err)
+	}
+	defer rows.Close()
+
+	var times []time.Time
+	for rows.Next() {
+		var tsStr string
+		if err := rows.Scan(&tsStr); err == nil {
+			if t, err := time.Parse(time.RFC3339, tsStr); err == nil {
+				times = append(times, t)
+			} else if t, err := time.Parse("2006-01-02 15:04:05", tsStr); err == nil {
+				times = append(times, t)
+			}
+		}
+	}
+
+	bucketCount := 20
+	buckets := make([]HistogramBucket, bucketCount)
+
+	var start, end time.Time
+	if in.StartTime != "" {
+		start, _ = time.Parse(time.RFC3339, in.StartTime)
+	}
+	if start.IsZero() && len(times) > 0 {
+		start = times[len(times)-1]
+	}
+	if in.EndTime != "" {
+		end, _ = time.Parse(time.RFC3339, in.EndTime)
+	}
+	if end.IsZero() {
+		end = time.Now()
+	}
+	if start.IsZero() {
+		start = end.Add(-1 * time.Hour)
+	}
+
+	// Recalculate start/end bounds from raw time data points
+	for _, t := range times {
+		if start.IsZero() || t.Before(start) {
+			start = t
+		}
+		if end.IsZero() || t.After(end) {
+			end = t
+		}
+	}
+
+	duration := end.Sub(start)
+	bucketDuration := duration / time.Duration(bucketCount)
+	if bucketDuration <= 0 {
+		bucketDuration = time.Second
+	}
+
+	for i := 0; i < bucketCount; i++ {
+		bStart := start.Add(bucketDuration * time.Duration(i))
+		buckets[i] = HistogramBucket{
+			Time:  bStart.Format(time.RFC3339),
+			Count: 0,
+		}
+	}
+
+	for _, t := range times {
+		if t.Before(start) || t.After(end) {
+			continue
+		}
+		index := int(t.Sub(start) / bucketDuration)
+		if index >= bucketCount {
+			index = bucketCount - 1
+		}
+		if index >= 0 {
+			buckets[index].Count++
+		}
+	}
+
+	return GetLogHistogramOutput{Buckets: buckets}, nil
 }
 
+// QueryErrors groups exceptions by message for Exception Intelligence.
 func (a *APIHandler) QueryErrors(ctx context.Context, in QueryErrorsInput) (QueryErrorsOutput, error) {
-	return QueryErrorsOutput{Errors: []ErrorGroup{}}, nil
+	_, _, ok := middleware.GetUserFromContext(ctx)
+	if !ok {
+		return QueryErrorsOutput{}, fmt.Errorf("unauthorized")
+	}
+
+	queryStr := `
+		SELECT message, error_group, COUNT(*), MIN(timestamp), MAX(timestamp), level
+		FROM events
+		WHERE project_id = ? AND type = 'error'`
+	args := []any{in.ProjectID}
+
+	if in.StartTime != "" {
+		queryStr += " AND timestamp >= ?"
+		args = append(args, in.StartTime)
+	}
+	if in.EndTime != "" {
+		queryStr += " AND timestamp <= ?"
+		args = append(args, in.EndTime)
+	}
+
+	queryStr += " GROUP BY error_group ORDER BY MAX(timestamp) DESC"
+
+	rows, err := a.db.QueryContext(ctx, queryStr, args...)
+	if err != nil {
+		return QueryErrorsOutput{}, fmt.Errorf("failed to query errors: %w", err)
+	}
+	defer rows.Close()
+
+	var errors []ErrorGroup
+	for rows.Next() {
+		var eg ErrorGroup
+		err := rows.Scan(
+			&eg.Message,
+			&eg.ErrorGroup,
+			&eg.Count,
+			&eg.FirstSeen,
+			&eg.LastSeen,
+			&eg.Level,
+		)
+		if err != nil {
+			return QueryErrorsOutput{}, fmt.Errorf("failed to scan error group: %w", err)
+		}
+		errors = append(errors, eg)
+	}
+	if errors == nil {
+		errors = []ErrorGroup{}
+	}
+	return QueryErrorsOutput{Errors: errors}, nil
 }
 
+// GetErrorDetails lists occurrences and contexts of a specific error group.
 func (a *APIHandler) GetErrorDetails(ctx context.Context, in GetErrorDetailsInput) (GetErrorDetailsOutput, error) {
-	return GetErrorDetailsOutput{Errors: []LogEvent{}}, nil
+	_, _, ok := middleware.GetUserFromContext(ctx)
+	if !ok {
+		return GetErrorDetailsOutput{}, fmt.Errorf("unauthorized")
+	}
+
+	rows, err := a.db.QueryContext(ctx, `
+		SELECT id, project_id, stream_id, type, timestamp, level, message, payload
+		FROM events
+		WHERE type = 'error' AND error_group = ?
+		ORDER BY timestamp DESC LIMIT 50`, in.ErrorGroup)
+	if err != nil {
+		return GetErrorDetailsOutput{}, fmt.Errorf("failed to query error details: %w", err)
+	}
+	defer rows.Close()
+
+	var logs []LogEvent
+	for rows.Next() {
+		var ev LogEvent
+		var payloadStr string
+		var streamIDVal sql.NullInt64
+
+		err := rows.Scan(
+			&ev.ID,
+			&ev.ProjectID,
+			&streamIDVal,
+			&ev.Type,
+			&ev.Timestamp,
+			&ev.Level,
+			&ev.Message,
+			&payloadStr,
+		)
+		if err != nil {
+			return GetErrorDetailsOutput{}, fmt.Errorf("failed to scan error detail: %w", err)
+		}
+
+		if streamIDVal.Valid {
+			idVal := int(streamIDVal.Int64)
+			ev.StreamID = &idVal
+		}
+
+		ev.Payload = make(map[string]any)
+		_ = json.Unmarshal([]byte(payloadStr), &ev.Payload)
+		logs = append(logs, ev)
+	}
+	if logs == nil {
+		logs = []LogEvent{}
+	}
+	return GetErrorDetailsOutput{Errors: logs}, nil
 }
 
+// QueryMetrics extracts numeric values from structured payload JSONs over time.
 func (a *APIHandler) QueryMetrics(ctx context.Context, in QueryMetricsInput) (QueryMetricsOutput, error) {
-	return QueryMetricsOutput{Points: []MetricDataPoint{}}, nil
+	_, _, ok := middleware.GetUserFromContext(ctx)
+	if !ok {
+		return QueryMetricsOutput{}, fmt.Errorf("unauthorized")
+	}
+
+	queryStr := `
+		SELECT timestamp, payload
+		FROM events
+		WHERE project_id = ? AND type = 'metric' AND message = ?`
+	args := []any{in.ProjectID, in.MetricName}
+
+	if in.StartTime != "" {
+		queryStr += " AND timestamp >= ?"
+		args = append(args, in.StartTime)
+	}
+	if in.EndTime != "" {
+		queryStr += " AND timestamp <= ?"
+		args = append(args, in.EndTime)
+	}
+
+	queryStr += " ORDER BY timestamp ASC"
+
+	rows, err := a.db.QueryContext(ctx, queryStr, args...)
+	if err != nil {
+		return QueryMetricsOutput{}, fmt.Errorf("failed to query metrics: %w", err)
+	}
+	defer rows.Close()
+
+	var points []MetricDataPoint
+	for rows.Next() {
+		var ts string
+		var payloadStr string
+		if err := rows.Scan(&ts, &payloadStr); err == nil {
+			var p map[string]any
+			if err := json.Unmarshal([]byte(payloadStr), &p); err == nil {
+				if val, exists := p["value"]; exists {
+					var floatVal float64
+					switch v := val.(type) {
+					case float64:
+						floatVal = v
+					case int:
+						floatVal = float64(v)
+					}
+					points = append(points, MetricDataPoint{
+						Timestamp: ts,
+						Value:     floatVal,
+					})
+				}
+			}
+		}
+	}
+	if points == nil {
+		points = []MetricDataPoint{}
+	}
+	return QueryMetricsOutput{Points: points}, nil
 }
 
+// GenerateDemoData seeds logs, metrics, and errors in SQLite for demonstration.
 func (a *APIHandler) GenerateDemoData(ctx context.Context, in EmptyInput) (EmptyInput, error) {
+	_, _, ok := middleware.GetUserFromContext(ctx)
+	if !ok {
+		return EmptyInput{}, fmt.Errorf("unauthorized")
+	}
+
+	var projectID int
+	err := a.db.QueryRowContext(ctx, "SELECT id FROM projects LIMIT 1").Scan(&projectID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			apiKey := "pk_" + uuid.New().String()
+			res, err := a.db.ExecContext(ctx, "INSERT INTO projects (name, api_key) VALUES ('Demo Project', ?)", apiKey)
+			if err != nil {
+				return EmptyInput{}, fmt.Errorf("failed to create demo project: %w", err)
+			}
+			projID, _ := res.LastInsertId()
+			projectID = int(projID)
+		} else {
+			return EmptyInput{}, fmt.Errorf("failed to check projects: %w", err)
+		}
+	}
+
+	var streamID int
+	err = a.db.QueryRowContext(ctx, "SELECT id FROM streams WHERE project_id = ? LIMIT 1", projectID).Scan(&streamID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			streamKey := "sk_" + uuid.New().String()
+			res, err := a.db.ExecContext(ctx, "INSERT INTO streams (project_id, name, stream_key) VALUES (?, 'prod-api', ?)", projectID, streamKey)
+			if err != nil {
+				return EmptyInput{}, fmt.Errorf("failed to create demo stream: %w", err)
+			}
+			stID, _ := res.LastInsertId()
+			streamID = int(stID)
+		} else {
+			return EmptyInput{}, fmt.Errorf("failed to check streams: %w", err)
+		}
+	}
+
+	tx, err := a.db.BeginTx(ctx, nil)
+	if err != nil {
+		return EmptyInput{}, err
+	}
+	defer tx.Rollback()
+
+	stmt, err := tx.PrepareContext(ctx, `
+		INSERT INTO events (project_id, stream_id, type, timestamp, level, message, payload, error_group)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+	`)
+	if err != nil {
+		return EmptyInput{}, err
+	}
+	defer stmt.Close()
+
+	now := time.Now().UTC()
+
+	// 1. Generate logs
+	logMessages := []string{
+		"User connection established",
+		"Cache miss - revalidating key",
+		"API request completed successfully",
+		"Database transaction committed",
+		"Token validation success",
+		"Job scheduler worker checked in",
+	}
+	logLevels := []string{"info", "info", "info", "debug", "info", "debug"}
+
+	for i := 0; i < 60; i++ {
+		idx := i % len(logMessages)
+		lvl := logLevels[idx]
+		msg := logMessages[idx]
+		ts := now.Add(-time.Duration(i*2) * time.Minute).Format(time.RFC3339)
+		payload := map[string]any{
+			"duration_ms": 10 + (i*3)%200,
+			"path":        "/api/v1/resource",
+			"status":      200,
+		}
+		pBytes, _ := json.Marshal(payload)
+
+		_, _ = stmt.ExecContext(ctx, projectID, streamID, "log", ts, lvl, msg, string(pBytes), "")
+	}
+
+	// 2. Generate metrics (CPU & Memory)
+	for i := 0; i < 40; i++ {
+		ts := now.Add(-time.Duration(i*3) * time.Minute).Format(time.RFC3339)
+
+		// CPU metric
+		cpuVal := 20.0 + float64((i*7)%60)
+		cpuPayload, _ := json.Marshal(map[string]any{"value": cpuVal, "unit": "%"})
+		_, _ = stmt.ExecContext(ctx, projectID, streamID, "metric", ts, "info", "cpu_usage", string(cpuPayload), "")
+
+		// RAM metric
+		ramVal := 512.0 + float64((i*23)%200)
+		ramPayload, _ := json.Marshal(map[string]any{"value": ramVal, "unit": "MB"})
+		_, _ = stmt.ExecContext(ctx, projectID, streamID, "metric", ts, "info", "memory_usage", string(ramPayload), "")
+	}
+
+	// 3. Generate errors
+	errMessages := []string{
+		"database connection pool exhausted",
+		"failed to parse JWT signature validation",
+		"payment gateway timeout from Stripe API",
+	}
+
+	for i := 0; i < 15; i++ {
+		idx := i % len(errMessages)
+		msg := errMessages[idx]
+		ts := now.Add(-time.Duration(i*7) * time.Minute).Format(time.RFC3339)
+		payload := map[string]any{
+			"stack": fmt.Sprintf("Error: %s\n    at authenticate (auth.go:42)\n    at serve (server.go:120)", msg),
+			"ip":    "127.0.0.1",
+		}
+		pBytes, _ := json.Marshal(payload)
+		_, _ = stmt.ExecContext(ctx, projectID, streamID, "error", ts, "error", msg, string(pBytes), msg)
+	}
+
+	_ = tx.Commit()
 	return EmptyInput{}, nil
 }
 

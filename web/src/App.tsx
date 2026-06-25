@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import { fetchHealth, fetchVersion } from './api'
 import { useFetch } from './hooks'
-import { API } from './lib/bridge'
+import { API, Project, Stream } from './lib/bridge'
 import { useBridge } from './lib/bridge-hooks'
 import { AuthView } from './components/auth-view'
+import { ProjectManager } from './components/project-manager'
+import { LogExplorer } from './components/log-explorer'
 import { MetricCard } from '@/components/metric-card'
 import { StatusBadge } from '@/components/status-badge'
 import { InfoTable } from '@/components/info-table'
@@ -273,17 +275,7 @@ function App() {
           )}
 
           {activeTab === 'logs' && selectedProject && (
-            <Card className="border-border/80 bg-card/50">
-              <CardHeader>
-                <CardTitle className="text-lg font-bold">Log Explorer</CardTitle>
-                <CardDescription>
-                  Investigate, search, and monitor real-time logs for {selectedProject.name}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="py-12 text-center text-muted-foreground italic text-sm">
-                Log Explorer interface will load in Part 5. Ingestion is fully configured in Part 4.
-              </CardContent>
-            </Card>
+            <LogExplorer selectedProject={selectedProject} />
           )}
 
           {activeTab === 'errors' && selectedProject && (
