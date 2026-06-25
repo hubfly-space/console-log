@@ -62,6 +62,7 @@ func New(cfg *config.Config, logger *slog.Logger, db *database.DB) http.Handler 
 	mux.HandleFunc("/readyz", apiHandler.HandleReadiness)
 	mux.HandleFunc("/version", handler.VersionHandler)
 	mux.HandleFunc("/api/hello", apiHandler.HandleHello)
+	mux.HandleFunc("/api/v1/ingest", apiHandler.HandleIngest)
 	
 	// Bridge endpoint (wrapped with authentication middleware)
 	mux.Handle("/api/v1/bridge/", middleware.Authenticate(db)(http.StripPrefix("/api/v1/bridge/", bridgeRegistry)))
