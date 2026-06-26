@@ -118,7 +118,7 @@ function App() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3">
-          <RefreshCw className="h-6 w-6 animate-spin text-blue-600" />
+          <RefreshCw className="h-6 w-6 animate-spin text-primary" />
           <p className="text-sm text-muted-foreground font-medium">Verifying credentials...</p>
         </div>
       </div>
@@ -177,7 +177,7 @@ function App() {
         {/* Advanced Top Navbar */}
         <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border/60 pb-5 mb-6">
           <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-lg bg-blue-600 flex items-center justify-center border border-blue-700 shadow-sm">
+            <div className="h-9 w-9 rounded-lg bg-primary flex items-center justify-center border border-border shadow-sm">
               <Activity className="h-5 w-5 text-white animate-pulse" />
             </div>
             <div>
@@ -426,7 +426,7 @@ function App() {
                       <p className="text-xs text-destructive">{helloError.message}</p>
                     ) : (
                       <div className="text-center">
-                        <p className="text-sm font-semibold text-blue-600">{helloData?.message || 'Waiting...'}</p>
+                        <p className="text-sm font-semibold text-primary">{helloData?.message || 'Waiting...'}</p>
                         <p className="text-[10px] text-muted-foreground mt-0.5">Last update: {helloData?.timestamp}</p>
                       </div>
                     )}
@@ -479,7 +479,7 @@ function TabButton({
         disabled
           ? 'opacity-40 cursor-not-allowed border-transparent text-muted-foreground'
           : active
-          ? 'border-blue-600/20 bg-blue-50/10 text-blue-600 font-bold shadow-2xs'
+          ? 'border-primary/20 bg-primary/10 text-primary font-bold shadow-2xs'
           : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/50'
       }`}
     >

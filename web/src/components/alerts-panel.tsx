@@ -107,7 +107,7 @@ export function AlertsPanel({ projectId }: AlertsPanelProps) {
 
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
           <DialogTrigger asChild>
-            <Button className="cursor-pointer bg-blue-600 text-white hover:bg-blue-500 font-medium">
+            <Button className="cursor-pointer">
               <Plus className="mr-1.5 size-4" /> Create Rule
             </Button>
           </DialogTrigger>
@@ -222,7 +222,7 @@ export function AlertsPanel({ projectId }: AlertsPanelProps) {
                 <Button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium cursor-pointer"
+                  className="w-full cursor-pointer"
                 >
                   {isSubmitting ? "Creating..." : "Create Rule"}
                 </Button>

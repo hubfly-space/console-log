@@ -83,7 +83,7 @@ export function IncidentsPanel({ projectId }: IncidentsPanelProps) {
 
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
           <DialogTrigger asChild>
-            <Button className="cursor-pointer bg-blue-600 text-white hover:bg-blue-500 font-medium">
+            <Button className="cursor-pointer">
               <Plus className="mr-1.5 size-4" /> Log Incident
             </Button>
           </DialogTrigger>
@@ -128,7 +128,7 @@ export function IncidentsPanel({ projectId }: IncidentsPanelProps) {
               </div>
 
               <DialogFooter className="pt-4">
-                <Button type="submit" disabled={isSubmitting} className="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium cursor-pointer">
+                <Button type="submit" disabled={isSubmitting} className="w-full cursor-pointer">
                   {isSubmitting ? "Logging..." : "Declare Incident"}
                 </Button>
               </DialogFooter>
@@ -161,7 +161,7 @@ export function IncidentsPanel({ projectId }: IncidentsPanelProps) {
                       setUpdateStatus(inc.status)
                     }}
                     className={`flex items-start justify-between p-4 cursor-pointer transition-colors ${
-                      selectedIncidentId === inc.id ? "bg-muted/50 border-r-2 border-blue-600" : "hover:bg-muted/30"
+                      selectedIncidentId === inc.id ? "bg-muted/50 border-r-2 border-primary" : "hover:bg-muted/30"
                     }`}
                   >
                     <div className="space-y-1 pr-4">
@@ -225,7 +225,7 @@ export function IncidentsPanel({ projectId }: IncidentsPanelProps) {
                   <div className="space-y-4 relative pl-3 border-l border-border">
                     {selectedIncident.updates.map((up) => (
                       <div key={up.id} className="relative space-y-0.5">
-                        <span className="absolute -left-[17px] top-1 size-2 rounded-full border border-card bg-blue-600" />
+                        <span className="absolute -left-[17px] top-1 size-2 rounded-full border border-card bg-primary" />
                         <div className="flex items-center justify-between">
                           <span className="text-2xs font-semibold text-foreground uppercase tracking-wider">{up.status}</span>
                           <span className="text-[10px] text-muted-foreground">{new Date(up.createdAt).toLocaleTimeString()}</span>
@@ -270,7 +270,7 @@ export function IncidentsPanel({ projectId }: IncidentsPanelProps) {
                       className="h-8 text-xs flex-1"
                       onChange={(e) => setUpdateMessage(e.target.value)}
                     />
-                    <Button type="submit" disabled={isUpdating} size="sm" className="bg-blue-600 text-white hover:bg-blue-500 font-medium cursor-pointer">
+                    <Button type="submit" disabled={isUpdating} size="sm" className="cursor-pointer">
                       {isUpdating ? "..." : "Post"}
                     </Button>
                   </div>

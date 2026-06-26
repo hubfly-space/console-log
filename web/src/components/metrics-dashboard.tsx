@@ -191,7 +191,7 @@ export function MetricsDashboard({ selectedProject }: MetricsDashboardProps) {
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-6">
-                <MetricAreaChart points={cpuPoints} color="blue" maxVal={100} unit="%" />
+                <MetricAreaChart points={cpuPoints} color="slate" maxVal={100} unit="%" />
               </CardContent>
             </Card>
 
@@ -216,7 +216,7 @@ export function MetricsDashboard({ selectedProject }: MetricsDashboardProps) {
 
 interface AreaChartProps {
   points: MetricDataPoint[];
-  color: 'blue' | 'emerald';
+  color: 'slate' | 'emerald';
   maxVal: number;
   unit: string;
 }
@@ -250,10 +250,10 @@ function MetricAreaChart({ points, color, maxVal, unit }: AreaChartProps) {
 
   // Curated theme styles
   const theme = {
-    blue: {
+    slate: {
       stroke: 'var(--color-primary)',
-      gradient: '#3b82f6',
-      bgGlow: 'rgba(59, 130, 246, 0.15)',
+      gradient: '#64748b',
+      bgGlow: 'rgba(100, 116, 139, 0.15)',
     },
     emerald: {
       stroke: 'var(--color-primary)', // oklch primary used dynamically
