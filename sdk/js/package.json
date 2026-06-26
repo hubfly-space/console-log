@@ -1,0 +1,38 @@
+{
+  "name": "console-log-sdk",
+  "version": "0.1.0",
+  "description": "JavaScript/TypeScript Developer SDK for Console Log observability platform",
+  "main": "dist/cjs/index.js",
+  "module": "dist/esm/index.js",
+  "types": "dist/cjs/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/esm/index.js",
+      "require": "./dist/cjs/index.js",
+      "types": "./dist/cjs/index.d.ts"
+    },
+    "./auto": {
+      "import": "./dist/esm/auto.js",
+      "require": "./dist/cjs/auto.js",
+      "types": "./dist/cjs/auto.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json && echo '{\"type\":\"commonjs\"}' > dist/cjs/package.json && tsc -p tsconfig.esm.json && echo '{\"type\":\"module\"}' > dist/esm/package.json",
+    "test": "node --experimental-strip-types --test src/*_test.ts"
+  },
+  "keywords": [
+    "observability",
+    "logging",
+    "metrics",
+    "errors",
+    "console-log"
+  ],
+  "author": "Console Log Team",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.0.0"
+  }
+}

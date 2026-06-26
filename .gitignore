@@ -16,8 +16,9 @@ build/
 coverage.txt
 coverage.html
 
-# Frontend
-web/node_modules/
+# Frontend & Node
+node_modules/
+dist/
 web/dist/
 
 # IDE
