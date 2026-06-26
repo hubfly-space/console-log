@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { fetchHealth, fetchVersion } from './api'
 import { useFetch } from './hooks'
-import { API, Project, Stream } from './lib/bridge'
+import { API, Project } from './lib/bridge'
 import { useBridge } from './lib/bridge-hooks'
 import { AuthView } from './components/auth-view'
 import { ProjectManager } from './components/project-manager'
@@ -9,12 +9,17 @@ import { LogExplorer } from './components/log-explorer'
 import { ErrorMonitor } from './components/error-monitor'
 import { MetricsDashboard } from './components/metrics-dashboard'
 import { LandingPage } from './components/landing-page'
+import { AlertsPanel } from './components/alerts-panel'
+import { DashboardBuilder } from './components/dashboard-builder'
+import { IncidentsPanel } from './components/incidents-panel'
+import { AuditPanel } from './components/audit-panel'
 import { MetricCard } from '@/components/metric-card'
 import { StatusBadge } from '@/components/status-badge'
 import { InfoTable } from '@/components/info-table'
 import { FeatureList } from '@/components/feature-list'
 import { Separator } from '@/components/ui/separator'
 import { Button } from '@/components/ui/button'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
   HeartPulse,
   GitCommit,
@@ -27,7 +32,18 @@ import {
   ExternalLink,
   Activity,
   LogOut,
+  FolderOpen,
+  LayoutGrid,
+  FileText,
+  AlertOctagon,
+  LineChart,
+  Bell,
+  ActivitySquare,
+  Shield,
+  Heart,
 } from 'lucide-react'
+
+type TabType = 'projects' | 'dashboards' | 'logs' | 'errors' | 'metrics' | 'alerts' | 'incidents' | 'audit' | 'system';
 
 function useTheme() {
   const [dark, setDark] = useState(() => {
@@ -50,7 +66,7 @@ function App() {
   const [dark, toggleTheme] = useTheme()
   const [user, setUser] = useState<any>(null)
   const [checkingAuth, setCheckingAuth] = useState(true)
-  const [activeTab, setActiveTab] = useState<'projects' | 'logs' | 'errors' | 'metrics' | 'system'>('projects')
+  const [activeTab, setActiveTab] = useState<TabType>('projects')
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
   const [projects, setProjects] = useState<Project[]>([])
   const [showLanding, setShowLanding] = useState(() => {
@@ -102,7 +118,7 @@ function App() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3">
-          <RefreshCw className="h-6 w-6 animate-spin text-primary" />
+          <RefreshCw className="h-6 w-6 animate-spin text-indigo-600" />
           <p className="text-sm text-muted-foreground font-medium">Verifying credentials...</p>
         </div>
       </div>
@@ -155,126 +171,141 @@ function App() {
     )
   }
 
-    return (
-    <div className="min-h-screen">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
-        {/* Header */}
-        <header className="flex items-center justify-between mb-8">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <Activity className="h-5 w-5 text-primary animate-pulse" />
-              <h1 className="text-xl font-bold tracking-tight">Console Log</h1>
+  return (
+    <div className="min-h-screen bg-background">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+        {/* Advanced Top Navbar */}
+        <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border/60 pb-5 mb-6">
+          <div className="flex items-center gap-3">
+            <div className="h-9 w-9 rounded-lg bg-indigo-600 flex items-center justify-center border border-indigo-700 shadow-sm">
+              <Activity className="h-5 w-5 text-white animate-pulse" />
             </div>
-            <p className="text-sm text-muted-foreground">
-              Observability Panel &mdash; Signed in as <span className="font-semibold text-foreground">{user?.email}</span>
-            </p>
+            <div>
+              <h1 className="text-lg font-bold tracking-tight text-foreground">Console Log</h1>
+              <p className="text-xs text-muted-foreground">
+                Developer Observability Engine &mdash; <span className="font-semibold text-foreground">{user?.email}</span>
+              </p>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" onClick={toggleTheme}>
+          
+          <div className="flex flex-wrap items-center gap-3">
+            {selectedProject && (
+              <div className="flex items-center gap-2 bg-muted/30 px-3 py-1.5 rounded-lg border border-border/80 text-xs shadow-2xs">
+                <span className="text-muted-foreground font-semibold">Project:</span>
+                <div className="w-40">
+                  <Select
+                    value={String(selectedProject.id)}
+                    onValueChange={(val) => {
+                      const proj = projects.find(p => p.id === parseInt(val, 10))
+                      if (proj) setSelectedProject(proj)
+                    }}
+                  >
+                    <SelectTrigger className="h-7 text-xs border-none bg-transparent hover:bg-muted py-0 px-1.5 focus:ring-0 cursor-pointer font-bold">
+                      <SelectValue placeholder="Select Project" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {projects.map(p => (
+                        <SelectItem key={p.id} value={String(p.id)}>
+                          {p.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
+
+            <Button variant="ghost" size="icon-sm" onClick={toggleTheme} className="cursor-pointer">
               {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </Button>
-            <Button variant="ghost" size="icon" asChild>
+            <Button variant="ghost" size="icon-sm" asChild className="cursor-pointer">
               <a href="https://github.com/bonheur/console-log" target="_blank" rel="noopener noreferrer">
                 <ExternalLink className="h-4 w-4" />
               </a>
             </Button>
-            <Button variant="outline" size="sm" className="gap-2 cursor-pointer border-destructive/20 text-destructive hover:bg-destructive/10" onClick={async () => {
-              try {
-                await API.logout({});
-              } catch (e) {
-                // Ignore, clear local session anyways
-              }
-              localStorage.removeItem('token');
-              setUser(null);
-              setShowLanding(true);
-            }}>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="gap-1.5 cursor-pointer border-destructive/20 text-destructive hover:bg-destructive/10 font-semibold"
+              onClick={async () => {
+                try {
+                  await API.logout({});
+                } catch (e) {
+                  // Ignore
+                }
+                localStorage.removeItem('token');
+                setUser(null);
+                setShowLanding(true);
+              }}
+            >
               <LogOut className="h-3.5 w-3.5" />
               Logout
             </Button>
           </div>
         </header>
 
-        {/* Global Project Selection and Tab Navigation */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-border/60 mb-6 pb-2 gap-4">
-          <div className="flex gap-1 overflow-x-auto scrollbar-none">
-            <button
-              onClick={() => setActiveTab('projects')}
-              className={`px-4 py-2 text-xs font-semibold uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
-                activeTab === 'projects'
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              Projects & Streams
-            </button>
-            <button
-              disabled={!selectedProject}
-              onClick={() => setActiveTab('logs')}
-              className={`px-4 py-2 text-xs font-semibold uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
-                !selectedProject
-                  ? 'opacity-40 cursor-not-allowed text-muted-foreground'
-                  : activeTab === 'logs'
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              Log Explorer
-            </button>
-            <button
-              disabled={!selectedProject}
-              onClick={() => setActiveTab('errors')}
-              className={`px-4 py-2 text-xs font-semibold uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
-                !selectedProject
-                  ? 'opacity-40 cursor-not-allowed text-muted-foreground'
-                  : activeTab === 'errors'
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              Error Monitor
-            </button>
-            <button
-              disabled={!selectedProject}
-              onClick={() => setActiveTab('metrics')}
-              className={`px-4 py-2 text-xs font-semibold uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
-                !selectedProject
-                  ? 'opacity-40 cursor-not-allowed text-muted-foreground'
-                  : activeTab === 'metrics'
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              Metrics
-            </button>
-            <button
-              onClick={() => setActiveTab('system')}
-              className={`px-4 py-2 text-xs font-semibold uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
-                activeTab === 'system'
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              System Health
-            </button>
-          </div>
-
-          {selectedProject && (
-            <div className="flex items-center gap-2 bg-secondary/50 px-3 py-1.5 rounded-lg border border-border/80 text-xs shrink-0 self-start sm:self-center">
-              <span className="text-muted-foreground">Active Project:</span>
-              <select
-                value={selectedProject.id}
-                onChange={(e) => {
-                  const proj = projects.find(p => p.id === parseInt(e.target.value))
-                  if (proj) setSelectedProject(proj)
-                }}
-                className="bg-transparent font-semibold border-none focus:outline-none cursor-pointer"
-              >
-                {projects.map(p => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
-            </div>
-          )}
+        {/* Navigation Tabs Bar */}
+        <div className="flex border-b border-border/60 mb-6 pb-2 overflow-x-auto scrollbar-none gap-2">
+          <TabButton
+            active={activeTab === 'projects'}
+            onClick={() => setActiveTab('projects')}
+            icon={FolderOpen}
+            label="Projects"
+          />
+          <TabButton
+            active={activeTab === 'dashboards'}
+            disabled={!selectedProject}
+            onClick={() => setActiveTab('dashboards')}
+            icon={LayoutGrid}
+            label="Dashboards"
+          />
+          <TabButton
+            active={activeTab === 'logs'}
+            disabled={!selectedProject}
+            onClick={() => setActiveTab('logs')}
+            icon={FileText}
+            label="Logs"
+          />
+          <TabButton
+            active={activeTab === 'errors'}
+            disabled={!selectedProject}
+            onClick={() => setActiveTab('errors')}
+            icon={AlertOctagon}
+            label="Errors"
+          />
+          <TabButton
+            active={activeTab === 'metrics'}
+            disabled={!selectedProject}
+            onClick={() => setActiveTab('metrics')}
+            icon={LineChart}
+            label="Metrics"
+          />
+          <TabButton
+            active={activeTab === 'alerts'}
+            disabled={!selectedProject}
+            onClick={() => setActiveTab('alerts')}
+            icon={Bell}
+            label="Alerts"
+          />
+          <TabButton
+            active={activeTab === 'incidents'}
+            disabled={!selectedProject}
+            onClick={() => setActiveTab('incidents')}
+            icon={ActivitySquare}
+            label="Incidents"
+          />
+          <TabButton
+            active={activeTab === 'audit'}
+            onClick={() => setActiveTab('audit')}
+            icon={Shield}
+            label="Audit Trail"
+          />
+          <TabButton
+            active={activeTab === 'system'}
+            onClick={() => setActiveTab('system')}
+            icon={Heart}
+            label="System"
+          />
         </div>
 
         {/* Tab Content Rendering */}
@@ -288,6 +319,10 @@ function App() {
             />
           )}
 
+          {activeTab === 'dashboards' && selectedProject && (
+            <DashboardBuilder projectId={selectedProject.id} />
+          )}
+
           {activeTab === 'logs' && selectedProject && (
             <LogExplorer selectedProject={selectedProject} />
           )}
@@ -298,6 +333,18 @@ function App() {
 
           {activeTab === 'metrics' && selectedProject && (
             <MetricsDashboard selectedProject={selectedProject} />
+          )}
+
+          {activeTab === 'alerts' && selectedProject && (
+            <AlertsPanel projectId={selectedProject.id} />
+          )}
+
+          {activeTab === 'incidents' && selectedProject && (
+            <IncidentsPanel projectId={selectedProject.id} />
+          )}
+
+          {activeTab === 'audit' && (
+            <AuditPanel />
           )}
 
           {activeTab === 'system' && (
@@ -358,28 +405,28 @@ function App() {
               </div>
 
               {/* Bridge Demo */}
-              <div className="rounded-xl border bg-card/40 p-5 shadow-sm">
-                <h3 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground mb-4">GoBridge RPC Hello Greeting Demo</h3>
+              <div className="rounded-xl border border-border bg-card p-5 shadow-2xs">
+                <h3 className="font-semibold text-xs uppercase tracking-wider text-muted-foreground mb-4">GoBridge RPC Hello Greeting Demo</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="flex gap-2">
-                    <input
+                    <Input
                       placeholder="Enter name..."
                       id="hello-name"
-                      className="flex-1 bg-secondary/30 px-3 py-2 rounded-md text-sm border focus:outline-none focus:ring-1 focus:ring-primary"
+                      className="flex-1"
                       onChange={(e) => setHelloName(e.target.value)}
                     />
-                    <Button variant="outline" size="icon" onClick={() => refetchHello()}>
+                    <Button variant="outline" size="icon" onClick={() => refetchHello()} className="cursor-pointer">
                       <RefreshCw className={`h-4 w-4 ${helloLoading ? 'animate-spin' : ''}`} />
                     </Button>
                   </div>
-                  <div className="bg-secondary/20 p-4 rounded-lg border border-dashed flex items-center justify-center min-h-[60px]">
+                  <div className="bg-muted/20 p-4 rounded-lg border border-dashed border-border/80 flex items-center justify-center min-h-[60px]">
                     {helloLoading ? (
                       <p className="text-xs text-muted-foreground italic">Revalidating...</p>
                     ) : helloError ? (
                       <p className="text-xs text-destructive">{helloError.message}</p>
                     ) : (
                       <div className="text-center">
-                        <p className="text-sm font-medium text-primary">{helloData?.message || 'Waiting...'}</p>
+                        <p className="text-sm font-semibold text-indigo-600">{helloData?.message || 'Waiting...'}</p>
                         <p className="text-[10px] text-muted-foreground mt-0.5">Last update: {helloData?.timestamp}</p>
                       </div>
                     )}
@@ -408,6 +455,37 @@ function App() {
         </footer>
       </div>
     </div>
+  )
+}
+
+function TabButton({
+  active,
+  disabled = false,
+  onClick,
+  icon: Icon,
+  label,
+}: {
+  active: boolean
+  disabled?: boolean
+  onClick: () => void
+  icon: any
+  label: string
+}) {
+  return (
+    <button
+      disabled={disabled}
+      onClick={onClick}
+      className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer shrink-0 border ${
+        disabled
+          ? 'opacity-40 cursor-not-allowed border-transparent text-muted-foreground'
+          : active
+          ? 'border-indigo-600/20 bg-indigo-50/10 text-indigo-600 font-bold shadow-2xs'
+          : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/50'
+      }`}
+    >
+      <Icon className="size-3.5" />
+      {label}
+    </button>
   )
 }
 
