@@ -160,7 +160,7 @@ export function DashboardBuilder({ projectId }: DashboardBuilderProps) {
                   />
                 </div>
                 <DialogFooter className="pt-2">
-                  <Button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium cursor-pointer">
+                  <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium cursor-pointer">
                     Create
                   </Button>
                 </DialogFooter>
@@ -170,7 +170,7 @@ export function DashboardBuilder({ projectId }: DashboardBuilderProps) {
 
           <Dialog open={isAddWidgetOpen} onOpenChange={setIsAddWidgetOpen}>
             <DialogTrigger asChild>
-              <Button className="cursor-pointer bg-indigo-600 text-white hover:bg-indigo-500 font-medium">
+              <Button className="cursor-pointer bg-blue-600 text-white hover:bg-blue-500 font-medium">
                 <Plus className="mr-1.5 size-4" /> Add Widget
               </Button>
             </DialogTrigger>
@@ -251,7 +251,7 @@ export function DashboardBuilder({ projectId }: DashboardBuilderProps) {
                 )}
 
                 <DialogFooter className="pt-4">
-                  <Button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium cursor-pointer">
+                  <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium cursor-pointer">
                     Add to Dashboard
                   </Button>
                 </DialogFooter>
@@ -260,7 +260,7 @@ export function DashboardBuilder({ projectId }: DashboardBuilderProps) {
           </Dialog>
 
           {widgets.length > 0 && (
-            <Button variant="outline" onClick={handleSaveDashboard} className="cursor-pointer border-indigo-600/30 text-indigo-600 hover:bg-indigo-50 bg-indigo-50/10 font-medium">
+            <Button variant="outline" onClick={handleSaveDashboard} className="cursor-pointer border-blue-600/30 text-blue-600 hover:bg-blue-50 bg-blue-50/10 font-medium">
               <Save className="mr-1.5 size-4" /> Save View
             </Button>
           )}
@@ -302,7 +302,7 @@ function WidgetCard({
     <Card className="border-border/60 shadow-xs flex flex-col h-[320px] overflow-hidden">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 py-3 border-b border-border/60 bg-muted/10">
         <div className="flex items-center gap-2">
-          {widget.type === "logs" && <FileText className="size-4 text-indigo-600" />}
+          {widget.type === "logs" && <FileText className="size-4 text-blue-600" />}
           {widget.type === "metrics" && <Activity className="size-4 text-emerald-600" />}
           {widget.type === "errors" && <AlertCircle className="size-4 text-rose-600" />}
           <CardTitle className="text-sm font-semibold truncate max-w-[200px]">{widget.name}</CardTitle>
@@ -343,7 +343,7 @@ function WidgetLogsView({ projectId, streamId, query }: { projectId: number; str
         <div key={l.id} className="border border-border/40 rounded-md p-1.5 bg-muted/10 flex items-start gap-2">
           <span className={`text-[9px] uppercase font-bold shrink-0 ${
             l.level === "error" || l.level === "critical" ? "text-rose-600" :
-            l.level === "warn" ? "text-amber-600" : "text-indigo-600"
+            l.level === "warn" ? "text-amber-600" : "text-blue-600"
           }`}>
             {l.level}
           </span>
@@ -394,7 +394,7 @@ function WidgetMetricsView({ projectId, metricName }: { projectId: number; metri
         <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} className="w-full h-full overflow-visible">
           <polyline
             fill="none"
-            stroke="var(--color-indigo-600, #4f46e5)"
+            stroke="var(--color-blue-600, #2563eb)"
             strokeWidth="2"
             points={pointsString}
           />

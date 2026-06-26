@@ -53,7 +53,7 @@ export function AuditPanel() {
                         </div>
                       </td>
                       <td className="p-3">
-                        <span className="inline-flex items-center gap-1 rounded-md border border-indigo-200 bg-indigo-50/50 px-1.5 py-0.5 text-3xs font-semibold uppercase tracking-wider text-indigo-600">
+                        <span className="inline-flex items-center gap-1 rounded-md border border-blue-200 bg-blue-50/50 px-1.5 py-0.5 text-3xs font-semibold uppercase tracking-wider text-blue-600">
                           {log.action}
                         </span>
                       </td>

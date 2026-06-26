@@ -110,7 +110,7 @@ export function ProjectManager({ user, onSelectProject, selectedProject, onProje
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
-            <Folder className="h-5 w-5 text-indigo-600" />
+            <Folder className="h-5 w-5 text-blue-600" />
             Monitored Projects
           </h2>
           <p className="text-sm text-muted-foreground">Manage active projects, API credentials, and collection streams.</p>
@@ -118,7 +118,7 @@ export function ProjectManager({ user, onSelectProject, selectedProject, onProje
 
         <Dialog open={isProjectModalOpen} onOpenChange={setIsProjectModalOpen}>
           <DialogTrigger asChild>
-            <Button className="cursor-pointer bg-indigo-600 hover:bg-indigo-500 text-white font-medium">
+            <Button className="cursor-pointer bg-blue-600 hover:bg-blue-500 text-white font-medium">
               <Plus className="mr-1.5 size-4" /> Create Project
             </Button>
           </DialogTrigger>
@@ -139,7 +139,7 @@ export function ProjectManager({ user, onSelectProject, selectedProject, onProje
                 />
               </div>
               <DialogFooter className="pt-2">
-                <Button type="submit" disabled={loading} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium cursor-pointer">
+                <Button type="submit" disabled={loading} className="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium cursor-pointer">
                   {loading ? "Creating..." : "Create Project"}
                 </Button>
               </DialogFooter>
@@ -170,7 +170,7 @@ export function ProjectManager({ user, onSelectProject, selectedProject, onProje
                       onClick={() => onSelectProject(p)}
                       className={`flex flex-col p-4 rounded-xl border text-left transition-all cursor-pointer relative ${
                         isSelected
-                          ? "border-indigo-600/60 bg-indigo-50/10 shadow-xs"
+                          ? "border-blue-600/60 bg-blue-50/10 shadow-xs"
                           : "border-border/60 hover:bg-muted/30 bg-background"
                       }`}
                     >
@@ -200,7 +200,7 @@ export function ProjectManager({ user, onSelectProject, selectedProject, onProje
                           )}
                         </Button>
                       </div>
-                      {isSelected && <span className="absolute top-4 right-4 h-2 w-2 rounded-full bg-indigo-600" />}
+                      {isSelected && <span className="absolute top-4 right-4 h-2 w-2 rounded-full bg-blue-600" />}
                     </button>
                   )
                 })}
@@ -217,7 +217,7 @@ export function ProjectManager({ user, onSelectProject, selectedProject, onProje
             <CardHeader className="flex flex-row items-center justify-between space-y-0">
               <div>
                 <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                  <Radio className="h-4 w-4 text-indigo-600" />
+                  <Radio className="h-4 w-4 text-blue-600" />
                   Ingestion Streams
                 </CardTitle>
                 <CardDescription>
@@ -248,7 +248,7 @@ export function ProjectManager({ user, onSelectProject, selectedProject, onProje
                       />
                     </div>
                     <DialogFooter className="pt-2">
-                      <Button type="submit" disabled={loading} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium cursor-pointer">
+                      <Button type="submit" disabled={loading} className="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium cursor-pointer">
                         {loading ? "Adding..." : "Add Ingestion Stream"}
                       </Button>
                     </DialogFooter>
@@ -271,8 +271,8 @@ export function ProjectManager({ user, onSelectProject, selectedProject, onProje
                       className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl border border-border/60 bg-background/50 gap-3"
                     >
                       <div className="flex items-center gap-2">
-                        <div className="h-6 w-6 rounded-lg bg-indigo-50/20 flex items-center justify-center border border-indigo-100">
-                          <Hash className="h-3.5 w-3.5 text-indigo-600" />
+                        <div className="h-6 w-6 rounded-lg bg-blue-50/20 flex items-center justify-center border border-blue-100">
+                          <Hash className="h-3.5 w-3.5 text-blue-600" />
                         </div>
                         <div>
                           <p className="text-sm font-semibold tracking-tight">{s.name}</p>
@@ -309,7 +309,7 @@ export function ProjectManager({ user, onSelectProject, selectedProject, onProje
               <Card className="border-border/60 bg-card shadow-xs">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                    <Terminal className="h-3.5 w-3.5 text-indigo-600" />
+                    <Terminal className="h-3.5 w-3.5 text-blue-600" />
                     Quick Curl Ingestion
                   </CardTitle>
                 </CardHeader>

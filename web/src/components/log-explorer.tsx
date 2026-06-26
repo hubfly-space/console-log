@@ -40,11 +40,11 @@ export function LogExplorer({ selectedProject }: LogExplorerProps) {
   const levelsConfig: Record<string, { bg: string; text: string; dot: string }> = {
     trace: { bg: 'bg-zinc-500/10 border-zinc-500/20', text: 'text-zinc-400', dot: 'bg-zinc-400' },
     debug: { bg: 'bg-blue-500/10 border-blue-500/20', text: 'text-blue-400', dot: 'bg-blue-400' },
-    info: { bg: 'bg-indigo-500/10 border-indigo-500/20', text: 'text-indigo-400', dot: 'bg-indigo-400' },
+    info: { bg: 'bg-sky-500/10 border-sky-500/20', text: 'text-sky-400', dot: 'bg-sky-400' },
     success: { bg: 'bg-emerald-500/10 border-emerald-500/20', text: 'text-emerald-400', dot: 'bg-emerald-400' },
     warning: { bg: 'bg-amber-500/10 border-amber-500/20', text: 'text-amber-400', dot: 'bg-amber-400' },
     error: { bg: 'bg-rose-500/10 border-rose-500/20', text: 'text-rose-400', dot: 'bg-rose-400' },
-    fatal: { bg: 'bg-violet-500/10 border-violet-500/20', text: 'text-violet-400', dot: 'bg-violet-400' },
+    fatal: { bg: 'bg-red-500/10 border-red-500/20', text: 'text-red-400', dot: 'bg-red-400' },
   }
 
   // Fetch streams

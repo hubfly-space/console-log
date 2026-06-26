@@ -121,7 +121,7 @@ export function MetricsDashboard({ selectedProject }: MetricsDashboardProps) {
             <Card className="border-border/80 bg-card/50">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                  <Cpu className="h-4 w-4 text-indigo-400" />
+                  <Cpu className="h-4 w-4 text-blue-400" />
                   CPU Allocation
                 </CardTitle>
                 <CardDescription className="text-xs">
@@ -186,12 +186,12 @@ export function MetricsDashboard({ selectedProject }: MetricsDashboardProps) {
             <Card className="border-border/80 bg-card/45">
               <CardHeader className="pb-3 border-b border-border/40">
                 <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                  <TrendingUp className="h-3.5 w-3.5 text-indigo-400" />
+                  <TrendingUp className="h-3.5 w-3.5 text-blue-400" />
                   CPU Load History (Last 24 Hours)
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-6">
-                <MetricAreaChart points={cpuPoints} color="indigo" maxVal={100} unit="%" />
+                <MetricAreaChart points={cpuPoints} color="blue" maxVal={100} unit="%" />
               </CardContent>
             </Card>
 
@@ -216,7 +216,7 @@ export function MetricsDashboard({ selectedProject }: MetricsDashboardProps) {
 
 interface AreaChartProps {
   points: MetricDataPoint[];
-  color: 'indigo' | 'emerald';
+  color: 'blue' | 'emerald';
   maxVal: number;
   unit: string;
 }
@@ -250,10 +250,10 @@ function MetricAreaChart({ points, color, maxVal, unit }: AreaChartProps) {
 
   // Curated theme styles
   const theme = {
-    indigo: {
+    blue: {
       stroke: 'var(--color-primary)',
-      gradient: '#6366f1',
-      bgGlow: 'rgba(99, 102, 241, 0.15)',
+      gradient: '#3b82f6',
+      bgGlow: 'rgba(59, 130, 246, 0.15)',
     },
     emerald: {
       stroke: 'var(--color-primary)', // oklch primary used dynamically
