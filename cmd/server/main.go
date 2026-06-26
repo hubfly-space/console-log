@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/bonheur/go-starter-kit/internal/alerts"
 	"github.com/bonheur/go-starter-kit/internal/config"
 	"github.com/bonheur/go-starter-kit/internal/database"
 	"github.com/bonheur/go-starter-kit/internal/router"
@@ -50,6 +51,11 @@ func main() {
 		logger.Error("database migration failed", slog.String("error", err.Error()))
 		os.Exit(1)
 	}
+
+	// Initialize and start background Alerts Engine.
+	alertsEngine := alerts.NewEngine(db, logger)
+	alertsEngine.Start()
+	defer alertsEngine.Stop()
 
 	// Create router
 	handler := router.New(cfg, logger, db)

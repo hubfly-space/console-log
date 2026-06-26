@@ -350,6 +350,7 @@ func (a *APIHandler) CreateProject(ctx context.Context, in CreateProjectInput) (
 	if err != nil {
 		createdAt = time.Now().Format(time.RFC3339)
 	}
+	a.recordAuditLog(ctx, "Create Project", fmt.Sprintf("Created project '%s' (ID %d)", in.Name, projID))
 	return CreateProjectOutput{
 		Success: true,
 		Project: Project{
@@ -410,6 +411,7 @@ func (a *APIHandler) CreateStream(ctx context.Context, in CreateStreamInput) (Cr
 	if err != nil {
 		createdAt = time.Now().Format(time.RFC3339)
 	}
+	a.recordAuditLog(ctx, "Create Stream", fmt.Sprintf("Created stream '%s' (ID %d) for project ID %d", in.Name, streamID, in.ProjectID))
 	return CreateStreamOutput{
 		Success: true,
 		Stream: Stream{
@@ -945,9 +947,509 @@ func (a *APIHandler) GenerateDemoData(ctx context.Context, in EmptyInput) (Empty
 }
 
 // Hello returns a simple greeting.
+// Hello returns a simple greeting.
 func (a *APIHandler) Hello(ctx context.Context, in HelloInput) (HelloOutput, error) {
 	return HelloOutput{
 		Message:   fmt.Sprintf("Hello, %s!", in.Name),
 		Timestamp: time.Now().Format(time.RFC3339),
 	}, nil
+}
+
+func (a *APIHandler) recordAuditLog(ctx context.Context, action string, details string) {
+	userID, _, ok := middleware.GetUserFromContext(ctx)
+	if ok {
+		_, _ = a.db.ExecContext(ctx, "INSERT INTO audit_logs (user_id, action, details) VALUES (?, ?, ?)", userID, action, details)
+	}
+}
+
+// --- Observability Structures and RPC Handlers ---
+
+// --- Alert Structures ---
+
+type CreateAlertRuleInput struct {
+	ProjectID      int     `json:"projectId"`
+	Name           string  `json:"name"`
+	MetricType     string  `json:"metricType"` // "error_count", "log_volume", "cpu_usage", "memory_usage"
+	Threshold      float64 `json:"threshold"`
+	Comparison     string  `json:"comparison"` // ">", "<", ">=", "<=", "="
+	TimeWindowMins int     `json:"timeWindowMins"`
+	Channel        string  `json:"channel"`
+	Target         string  `json:"target"`
+}
+
+type CreateAlertRuleOutput struct {
+	Success bool `json:"success"`
+	ID      int  `json:"id"`
+}
+
+type ListAlertRulesInput struct {
+	ProjectID int `json:"projectId"`
+}
+
+type AlertRule struct {
+	ID             int     `json:"id"`
+	ProjectID      int     `json:"projectId"`
+	Name           string  `json:"name"`
+	MetricType     string  `json:"metricType"`
+	Threshold      float64 `json:"threshold"`
+	Comparison     string  `json:"comparison"`
+	TimeWindowMins int     `json:"timeWindowMins"`
+	Channel        string  `json:"channel"`
+	Target         string  `json:"target"`
+	Active         int     `json:"active"`
+	CreatedAt      string  `json:"createdAt"`
+}
+
+type ListAlertRulesOutput struct {
+	Rules []AlertRule `json:"rules"`
+}
+
+type ToggleAlertRuleInput struct {
+	ID     int `json:"id"`
+	Active int `json:"active"`
+}
+
+type ToggleAlertRuleOutput struct {
+	Success bool `json:"success"`
+}
+
+type DeleteAlertRuleInput struct {
+	ID int `json:"id"`
+}
+
+type DeleteAlertRuleOutput struct {
+	Success bool `json:"success"`
+}
+
+type QueryAlertsHistoryInput struct {
+	ProjectID int `json:"projectId"`
+}
+
+type AlertHistoryEntry struct {
+	ID             int     `json:"id"`
+	RuleID         int     `json:"ruleId"`
+	RuleName       string  `json:"ruleName"`
+	MetricType     string  `json:"metricType"`
+	TriggeredValue float64 `json:"triggeredValue"`
+	Threshold      float64 `json:"threshold"`
+	Comparison     string  `json:"comparison"`
+	TriggeredAt    string  `json:"triggeredAt"`
+}
+
+type QueryAlertsHistoryOutput struct {
+	History []AlertHistoryEntry `json:"history"`
+}
+
+// --- Dashboard Structures ---
+
+type SaveDashboardInput struct {
+	ProjectID int    `json:"projectId"`
+	Name      string `json:"name"`
+	Layout    string `json:"layout"` // JSON string representation of layout widgets
+}
+
+type SaveDashboardOutput struct {
+	Success bool `json:"success"`
+	ID      int  `json:"id"`
+}
+
+type GetDashboardsInput struct {
+	ProjectID int `json:"projectId"`
+}
+
+type Dashboard struct {
+	ID        int    `json:"id"`
+	ProjectID int    `json:"projectId"`
+	Name      string `json:"name"`
+	Layout    string `json:"layout"`
+	CreatedAt string `json:"createdAt"`
+}
+
+type GetDashboardsOutput struct {
+	Dashboards []Dashboard `json:"dashboards"`
+}
+
+// --- Incident Structures ---
+
+type CreateIncidentInput struct {
+	ProjectID   int    `json:"projectId"`
+	Title       string `json:"title"`
+	Severity    string `json:"severity"` // "info", "warning", "critical"
+	Description string `json:"description"`
+}
+
+type CreateIncidentOutput struct {
+	Success bool `json:"success"`
+	ID      int  `json:"id"`
+}
+
+type UpdateIncidentStatusInput struct {
+	ID      int    `json:"id"`
+	Message string `json:"message"`
+	Status  string `json:"status"` // "investigating", "identified", "monitoring", "resolved"
+}
+
+type UpdateIncidentStatusOutput struct {
+	Success bool `json:"success"`
+}
+
+type ListIncidentsInput struct {
+	ProjectID int `json:"projectId"`
+}
+
+type IncidentUpdate struct {
+	ID         int    `json:"id"`
+	IncidentID int    `json:"incidentId"`
+	Message    string `json:"message"`
+	Status     string `json:"status"`
+	CreatedAt  string `json:"createdAt"`
+}
+
+type Incident struct {
+	ID          int              `json:"id"`
+	ProjectID   int              `json:"projectId"`
+	Title       string           `json:"title"`
+	Status      string           `json:"status"`
+	Severity    string           `json:"severity"`
+	Description string           `json:"description"`
+	CreatedAt   string           `json:"createdAt"`
+	ResolvedAt  *string          `json:"resolvedAt"`
+	Updates     []IncidentUpdate `json:"updates"`
+}
+
+type ListIncidentsOutput struct {
+	Incidents []Incident `json:"incidents"`
+}
+
+// --- Audit Trail Structures ---
+
+type QueryAuditLogsInput struct {
+	UserID int `json:"userId"`
+}
+
+type AuditLog struct {
+	ID        int    `json:"id"`
+	UserID    int    `json:"userId"`
+	UserName  string `json:"userName"`
+	Action    string `json:"action"`
+	Details   string `json:"details"`
+	CreatedAt string `json:"createdAt"`
+}
+
+type QueryAuditLogsOutput struct {
+	Logs []AuditLog `json:"logs"`
+}
+
+// --- Alert Rules RPC Handlers ---
+
+func (a *APIHandler) CreateAlertRule(ctx context.Context, in CreateAlertRuleInput) (CreateAlertRuleOutput, error) {
+	_, _, ok := middleware.GetUserFromContext(ctx)
+	if !ok {
+		return CreateAlertRuleOutput{}, fmt.Errorf("unauthorized")
+	}
+	res, err := a.db.ExecContext(ctx, `
+		INSERT INTO alert_rules (project_id, name, metric_type, threshold, comparison, time_window_mins, channel, target, active)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
+	`, in.ProjectID, in.Name, in.MetricType, in.Threshold, in.Comparison, in.TimeWindowMins, in.Channel, in.Target)
+	if err != nil {
+		return CreateAlertRuleOutput{}, fmt.Errorf("failed to create alert rule: %w", err)
+	}
+	id, err := res.LastInsertId()
+	if err != nil {
+		return CreateAlertRuleOutput{}, err
+	}
+	a.recordAuditLog(ctx, "Create Alert Rule", fmt.Sprintf("Created alert rule '%s' for project ID %d", in.Name, in.ProjectID))
+	return CreateAlertRuleOutput{Success: true, ID: int(id)}, nil
+}
+
+func (a *APIHandler) ListAlertRules(ctx context.Context, in ListAlertRulesInput) (ListAlertRulesOutput, error) {
+	_, _, ok := middleware.GetUserFromContext(ctx)
+	if !ok {
+		return ListAlertRulesOutput{}, fmt.Errorf("unauthorized")
+	}
+	rows, err := a.db.QueryContext(ctx, `
+		SELECT id, project_id, name, metric_type, threshold, comparison, time_window_mins, channel, target, active, created_at
+		FROM alert_rules WHERE project_id = ? ORDER BY created_at DESC
+	`, in.ProjectID)
+	if err != nil {
+		return ListAlertRulesOutput{}, fmt.Errorf("failed to list alert rules: %w", err)
+	}
+	defer rows.Close()
+
+	var rules []AlertRule
+	for rows.Next() {
+		var r AlertRule
+		err := rows.Scan(&r.ID, &r.ProjectID, &r.Name, &r.MetricType, &r.Threshold, &r.Comparison, &r.TimeWindowMins, &r.Channel, &r.Target, &r.Active, &r.CreatedAt)
+		if err != nil {
+			return ListAlertRulesOutput{}, err
+		}
+		rules = append(rules, r)
+	}
+	if rules == nil {
+		rules = []AlertRule{}
+	}
+	return ListAlertRulesOutput{Rules: rules}, nil
+}
+
+func (a *APIHandler) ToggleAlertRule(ctx context.Context, in ToggleAlertRuleInput) (ToggleAlertRuleOutput, error) {
+	_, _, ok := middleware.GetUserFromContext(ctx)
+	if !ok {
+		return ToggleAlertRuleOutput{}, fmt.Errorf("unauthorized")
+	}
+	_, err := a.db.ExecContext(ctx, "UPDATE alert_rules SET active = ? WHERE id = ?", in.Active, in.ID)
+	if err != nil {
+		return ToggleAlertRuleOutput{}, fmt.Errorf("failed to toggle alert rule: %w", err)
+	}
+	a.recordAuditLog(ctx, "Toggle Alert Rule", fmt.Sprintf("Toggled alert rule ID %d active=%d", in.ID, in.Active))
+	return ToggleAlertRuleOutput{Success: true}, nil
+}
+
+func (a *APIHandler) DeleteAlertRule(ctx context.Context, in DeleteAlertRuleInput) (DeleteAlertRuleOutput, error) {
+	_, _, ok := middleware.GetUserFromContext(ctx)
+	if !ok {
+		return DeleteAlertRuleOutput{}, fmt.Errorf("unauthorized")
+	}
+	_, err := a.db.ExecContext(ctx, "DELETE FROM alert_rules WHERE id = ?", in.ID)
+	if err != nil {
+		return DeleteAlertRuleOutput{}, fmt.Errorf("failed to delete alert rule: %w", err)
+	}
+	a.recordAuditLog(ctx, "Delete Alert Rule", fmt.Sprintf("Deleted alert rule ID %d", in.ID))
+	return DeleteAlertRuleOutput{Success: true}, nil
+}
+
+func (a *APIHandler) QueryAlertsHistory(ctx context.Context, in QueryAlertsHistoryInput) (QueryAlertsHistoryOutput, error) {
+	_, _, ok := middleware.GetUserFromContext(ctx)
+	if !ok {
+		return QueryAlertsHistoryOutput{}, fmt.Errorf("unauthorized")
+	}
+	rows, err := a.db.QueryContext(ctx, `
+		SELECT h.id, h.rule_id, r.name, r.metric_type, h.triggered_value, r.threshold, r.comparison, h.triggered_at
+		FROM alerts_history h
+		JOIN alert_rules r ON h.rule_id = r.id
+		WHERE h.project_id = ?
+		ORDER BY h.triggered_at DESC LIMIT 100
+	`, in.ProjectID)
+	if err != nil {
+		return QueryAlertsHistoryOutput{}, fmt.Errorf("failed to query alert history: %w", err)
+	}
+	defer rows.Close()
+
+	var history []AlertHistoryEntry
+	for rows.Next() {
+		var h AlertHistoryEntry
+		err := rows.Scan(&h.ID, &h.RuleID, &h.RuleName, &h.MetricType, &h.TriggeredValue, &h.Threshold, &h.Comparison, &h.TriggeredAt)
+		if err != nil {
+			return QueryAlertsHistoryOutput{}, err
+		}
+		history = append(history, h)
+	}
+	if history == nil {
+		history = []AlertHistoryEntry{}
+	}
+	return QueryAlertsHistoryOutput{History: history}, nil
+}
+
+// --- Dashboard RPC Handlers ---
+
+func (a *APIHandler) SaveDashboard(ctx context.Context, in SaveDashboardInput) (SaveDashboardOutput, error) {
+	_, _, ok := middleware.GetUserFromContext(ctx)
+	if !ok {
+		return SaveDashboardOutput{}, fmt.Errorf("unauthorized")
+	}
+	// Check if exists
+	var id int
+	err := a.db.QueryRowContext(ctx, "SELECT id FROM dashboards WHERE project_id = ? AND name = ?", in.ProjectID, in.Name).Scan(&id)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			res, err := a.db.ExecContext(ctx, "INSERT INTO dashboards (project_id, name, layout) VALUES (?, ?, ?)", in.ProjectID, in.Name, in.Layout)
+			if err != nil {
+				return SaveDashboardOutput{}, err
+			}
+			newID, _ := res.LastInsertId()
+			a.recordAuditLog(ctx, "Create Dashboard", fmt.Sprintf("Created dashboard '%s'", in.Name))
+			return SaveDashboardOutput{Success: true, ID: int(newID)}, nil
+		}
+		return SaveDashboardOutput{}, err
+	}
+	_, err = a.db.ExecContext(ctx, "UPDATE dashboards SET layout = ? WHERE id = ?", in.Layout, id)
+	if err != nil {
+		return SaveDashboardOutput{}, err
+	}
+	a.recordAuditLog(ctx, "Update Dashboard", fmt.Sprintf("Updated dashboard '%s'", in.Name))
+	return SaveDashboardOutput{Success: true, ID: id}, nil
+}
+
+func (a *APIHandler) GetDashboards(ctx context.Context, in GetDashboardsInput) (GetDashboardsOutput, error) {
+	_, _, ok := middleware.GetUserFromContext(ctx)
+	if !ok {
+		return GetDashboardsOutput{}, fmt.Errorf("unauthorized")
+	}
+	rows, err := a.db.QueryContext(ctx, "SELECT id, project_id, name, layout, created_at FROM dashboards WHERE project_id = ?", in.ProjectID)
+	if err != nil {
+		return GetDashboardsOutput{}, err
+	}
+	defer rows.Close()
+
+	var dashboards []Dashboard
+	for rows.Next() {
+		var d Dashboard
+		if err := rows.Scan(&d.ID, &d.ProjectID, &d.Name, &d.Layout, &d.CreatedAt); err != nil {
+			return GetDashboardsOutput{}, err
+		}
+		dashboards = append(dashboards, d)
+	}
+	if dashboards == nil {
+		dashboards = []Dashboard{}
+	}
+	return GetDashboardsOutput{Dashboards: dashboards}, nil
+}
+
+// --- Incident RPC Handlers ---
+
+func (a *APIHandler) CreateIncident(ctx context.Context, in CreateIncidentInput) (CreateIncidentOutput, error) {
+	_, _, ok := middleware.GetUserFromContext(ctx)
+	if !ok {
+		return CreateIncidentOutput{}, fmt.Errorf("unauthorized")
+	}
+	res, err := a.db.ExecContext(ctx, `
+		INSERT INTO incidents (project_id, title, status, severity, description)
+		VALUES (?, ?, 'open', ?, ?)
+	`, in.ProjectID, in.Title, in.Severity, in.Description)
+	if err != nil {
+		return CreateIncidentOutput{}, err
+	}
+	id, err := res.LastInsertId()
+	if err != nil {
+		return CreateIncidentOutput{}, err
+	}
+	// Add initial update
+	_, _ = a.db.ExecContext(ctx, "INSERT INTO incident_updates (incident_id, message, status) VALUES (?, 'Incident created.', 'open')", id)
+	a.recordAuditLog(ctx, "Create Incident", fmt.Sprintf("Created incident '%s' with severity %s", in.Title, in.Severity))
+	return CreateIncidentOutput{Success: true, ID: int(id)}, nil
+}
+
+func (a *APIHandler) UpdateIncidentStatus(ctx context.Context, in UpdateIncidentStatusInput) (UpdateIncidentStatusOutput, error) {
+	_, _, ok := middleware.GetUserFromContext(ctx)
+	if !ok {
+		return UpdateIncidentStatusOutput{}, fmt.Errorf("unauthorized")
+	}
+	tx, err := a.db.BeginTx(ctx, nil)
+	if err != nil {
+		return UpdateIncidentStatusOutput{}, err
+	}
+	defer tx.Rollback()
+
+	var query string
+	if in.Status == "resolved" {
+		query = "UPDATE incidents SET status = ?, resolved_at = datetime('now') WHERE id = ?"
+	} else {
+		query = "UPDATE incidents SET status = ? WHERE id = ?"
+	}
+	_, err = tx.ExecContext(ctx, query, in.Status, in.ID)
+	if err != nil {
+		return UpdateIncidentStatusOutput{}, err
+	}
+
+	_, err = tx.ExecContext(ctx, "INSERT INTO incident_updates (incident_id, message, status) VALUES (?, ?, ?)", in.ID, in.Message, in.Status)
+	if err != nil {
+		return UpdateIncidentStatusOutput{}, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return UpdateIncidentStatusOutput{}, err
+	}
+
+	a.recordAuditLog(ctx, "Update Incident", fmt.Sprintf("Updated incident ID %d to status %s: %s", in.ID, in.Status, in.Message))
+	return UpdateIncidentStatusOutput{Success: true}, nil
+}
+
+func (a *APIHandler) ListIncidents(ctx context.Context, in ListIncidentsInput) (ListIncidentsOutput, error) {
+	_, _, ok := middleware.GetUserFromContext(ctx)
+	if !ok {
+		return ListIncidentsOutput{}, fmt.Errorf("unauthorized")
+	}
+
+	rows, err := a.db.QueryContext(ctx, `
+		SELECT id, project_id, title, status, severity, description, created_at, resolved_at
+		FROM incidents WHERE project_id = ? ORDER BY created_at DESC
+	`, in.ProjectID)
+	if err != nil {
+		return ListIncidentsOutput{}, err
+	}
+	defer rows.Close()
+
+	var incidents []Incident
+	for rows.Next() {
+		var inc Incident
+		var resolvedAtVal sql.NullString
+		err := rows.Scan(&inc.ID, &inc.ProjectID, &inc.Title, &inc.Status, &inc.Severity, &inc.Description, &inc.CreatedAt, &resolvedAtVal)
+		if err != nil {
+			return ListIncidentsOutput{}, err
+		}
+		if resolvedAtVal.Valid {
+			val := resolvedAtVal.String
+			inc.ResolvedAt = &val
+		}
+		incidents = append(incidents, inc)
+	}
+
+	// Fetch updates for each incident
+	for i := range incidents {
+		upRows, err := a.db.QueryContext(ctx, `
+			SELECT id, incident_id, message, status, created_at
+			FROM incident_updates WHERE incident_id = ? ORDER BY created_at ASC
+		`, incidents[i].ID)
+		if err != nil {
+			return ListIncidentsOutput{}, err
+		}
+		var updates []IncidentUpdate
+		for upRows.Next() {
+			var up IncidentUpdate
+			if err := upRows.Scan(&up.ID, &up.IncidentID, &up.Message, &up.Status, &up.CreatedAt); err == nil {
+				updates = append(updates, up)
+			}
+		}
+		upRows.Close()
+		if updates == nil {
+			updates = []IncidentUpdate{}
+		}
+		incidents[i].Updates = updates
+	}
+
+	if incidents == nil {
+		incidents = []Incident{}
+	}
+	return ListIncidentsOutput{Incidents: incidents}, nil
+}
+
+// --- Audit Trail RPC Handler ---
+
+func (a *APIHandler) QueryAuditLogs(ctx context.Context, in QueryAuditLogsInput) (QueryAuditLogsOutput, error) {
+	_, _, ok := middleware.GetUserFromContext(ctx)
+	if !ok {
+		return QueryAuditLogsOutput{}, fmt.Errorf("unauthorized")
+	}
+
+	rows, err := a.db.QueryContext(ctx, `
+		SELECT l.id, l.user_id, u.name, l.action, l.details, l.created_at
+		FROM audit_logs l
+		JOIN users u ON l.user_id = u.id
+		ORDER BY l.created_at DESC LIMIT 200
+	`)
+	if err != nil {
+		return QueryAuditLogsOutput{}, err
+	}
+	defer rows.Close()
+
+	var logs []AuditLog
+	for rows.Next() {
+		var log AuditLog
+		if err := rows.Scan(&log.ID, &log.UserID, &log.UserName, &log.Action, &log.Details, &log.CreatedAt); err == nil {
+			logs = append(logs, log)
+		}
+	}
+	if logs == nil {
+		logs = []AuditLog{}
+	}
+	return QueryAuditLogsOutput{Logs: logs}, nil
 }

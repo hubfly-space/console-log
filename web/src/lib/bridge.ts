@@ -5,6 +5,68 @@ export interface BridgeConfig {
   headers?: Record<string, string> | (() => Record<string, string> | Promise<Record<string, string>>);
 }
 
+export interface AlertHistoryEntry {
+  id: number;
+  ruleId: number;
+  ruleName: string;
+  metricType: string;
+  triggeredValue: number;
+  threshold: number;
+  comparison: string;
+  triggeredAt: string;
+}
+
+export interface AlertRule {
+  id: number;
+  projectId: number;
+  name: string;
+  metricType: string;
+  threshold: number;
+  comparison: string;
+  timeWindowMins: number;
+  channel: string;
+  target: string;
+  active: number;
+  createdAt: string;
+}
+
+export interface AuditLog {
+  id: number;
+  userId: number;
+  userName: string;
+  action: string;
+  details: string;
+  createdAt: string;
+}
+
+export interface CreateAlertRuleInput {
+  projectId: number;
+  name: string;
+  metricType: string;
+  threshold: number;
+  comparison: string;
+  timeWindowMins: number;
+  channel: string;
+  target: string;
+}
+
+export interface CreateAlertRuleOutput {
+  success: boolean;
+  id: number;
+}
+
+export interface CreateIncidentInput {
+  projectId: number;
+  title: string;
+  severity: string;
+  description: string;
+}
+
+export interface CreateIncidentOutput {
+  success: boolean;
+  id: number;
+}
+
 export interface CreateProjectInput {
   name: string;
 }
@@ -29,6 +91,22 @@ export interface CurrentUserOutput {
   user: User;
 }
 
+export interface Dashboard {
+  id: number;
+  projectId: number;
+  name: string;
+  layout: string;
+  createdAt: string;
+}
+
+export interface DeleteAlertRuleInput {
+  id: number;
+}
+
+export interface DeleteAlertRuleOutput {
+  success: boolean;
+}
+
 export interface EmptyInput {
 }
 
@@ -39,6 +117,14 @@ export interface ErrorGroup {
   firstSeen: string;
   lastSeen: string;
   level: string;
+}
+
+export interface GetDashboardsInput {
+  projectId: number;
+}
+
+export interface GetDashboardsOutput {
+  dashboards: Dashboard[];
 }
 
 export interface GetErrorDetailsInput {
@@ -74,6 +160,42 @@ export interface HelloOutput {
 export interface HistogramBucket {
   time: string;
   count: number;
+}
+
+export interface Incident {
+  id: number;
+  projectId: number;
+  title: string;
+  status: string;
+  severity: string;
+  description: string;
+  createdAt: string;
+  resolvedAt: string;
+  updates: IncidentUpdate[];
+}
+
+export interface IncidentUpdate {
+  id: number;
+  incidentId: number;
+  message: string;
+  status: string;
+  createdAt: string;
+}
+
+export interface ListAlertRulesInput {
+  projectId: number;
+}
+
+export interface ListAlertRulesOutput {
+  rules: AlertRule[];
+}
+
+export interface ListIncidentsInput {
+  projectId: number;
+}
+
+export interface ListIncidentsOutput {
+  incidents: Incident[];
 }
 
 export interface ListProjectsOutput {
@@ -129,6 +251,22 @@ export interface Project {
   createdAt: string;
 }
 
+export interface QueryAlertsHistoryInput {
+  projectId: number;
+}
+
+export interface QueryAlertsHistoryOutput {
+  history: AlertHistoryEntry[];
+}
+
+export interface QueryAuditLogsInput {
+  userId: number;
+}
+
+export interface QueryAuditLogsOutput {
+  logs: AuditLog[];
+}
+
 export interface QueryErrorsInput {
   projectId: number;
   startTime: string;
@@ -165,6 +303,17 @@ export interface QueryMetricsOutput {
   points: MetricDataPoint[];
 }
 
+export interface SaveDashboardInput {
+  projectId: number;
+  name: string;
+  layout: string;
+}
+
+export interface SaveDashboardOutput {
+  success: boolean;
+  id: number;
+}
+
 export interface SignUpInput {
   email: string;
   name: string;
@@ -183,6 +332,25 @@ export interface Stream {
   name: string;
   streamKey: string;
   createdAt: string;
+}
+
+export interface ToggleAlertRuleInput {
+  id: number;
+  active: number;
+}
+
+export interface ToggleAlertRuleOutput {
+  success: boolean;
+}
+
+export interface UpdateIncidentStatusInput {
+  id: number;
+  message: string;
+  status: string;
+}
+
+export interface UpdateIncidentStatusOutput {
+  success: boolean;
 }
 
 export interface User {
@@ -205,6 +373,34 @@ export class BridgeClient {
       headers = { ...headers, ...extraHeaders };
     }
     return headers;
+  }
+
+  /** Creates a new alert rule. */
+  async createAlertRule(input: CreateAlertRuleInput): Promise<CreateAlertRuleOutput> {
+    const res = await fetch(`${this.config.baseUrl || ''}/api/v1/bridge/createAlertRule`, {
+      method: 'POST',
+      headers: await this.getHeaders(),
+      body: JSON.stringify(input),
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(text || `Bridge error: ${res.status}`);
+    }
+    return res.json();
+  }
+
+  /** Creates a new incident. */
+  async createIncident(input: CreateIncidentInput): Promise<CreateIncidentOutput> {
+    const res = await fetch(`${this.config.baseUrl || ''}/api/v1/bridge/createIncident`, {
+      method: 'POST',
+      headers: await this.getHeaders(),
+      body: JSON.stringify(input),
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(text || `Bridge error: ${res.status}`);
+    }
+    return res.json();
   }
 
   /** Creates a new project. */
@@ -235,6 +431,20 @@ export class BridgeClient {
     return res.json();
   }
 
+  /** Deletes an alert rule. */
+  async deleteAlertRule(input: DeleteAlertRuleInput): Promise<DeleteAlertRuleOutput> {
+    const res = await fetch(`${this.config.baseUrl || ''}/api/v1/bridge/deleteAlertRule`, {
+      method: 'POST',
+      headers: await this.getHeaders(),
+      body: JSON.stringify(input),
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(text || `Bridge error: ${res.status}`);
+    }
+    return res.json();
+  }
+
   /** Generates demo logs, metrics, and errors. */
   async generateDemoData(input: EmptyInput): Promise<EmptyInput> {
     const res = await fetch(`${this.config.baseUrl || ''}/api/v1/bridge/generateDemoData`, {
@@ -252,6 +462,20 @@ export class BridgeClient {
   /** Returns the current authenticated user. */
   async getCurrentUser(input: EmptyInput): Promise<CurrentUserOutput> {
     const res = await fetch(`${this.config.baseUrl || ''}/api/v1/bridge/getCurrentUser`, {
+      method: 'POST',
+      headers: await this.getHeaders(),
+      body: JSON.stringify(input),
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(text || `Bridge error: ${res.status}`);
+    }
+    return res.json();
+  }
+
+  /** Gets dashboards for a project. */
+  async getDashboards(input: GetDashboardsInput): Promise<GetDashboardsOutput> {
+    const res = await fetch(`${this.config.baseUrl || ''}/api/v1/bridge/getDashboards`, {
       method: 'POST',
       headers: await this.getHeaders(),
       body: JSON.stringify(input),
@@ -294,6 +518,34 @@ export class BridgeClient {
   /** Returns a greeting message. */
   async hello(input: HelloInput): Promise<HelloOutput> {
     const res = await fetch(`${this.config.baseUrl || ''}/api/v1/bridge/hello`, {
+      method: 'POST',
+      headers: await this.getHeaders(),
+      body: JSON.stringify(input),
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(text || `Bridge error: ${res.status}`);
+    }
+    return res.json();
+  }
+
+  /** Lists all alert rules for a project. */
+  async listAlertRules(input: ListAlertRulesInput): Promise<ListAlertRulesOutput> {
+    const res = await fetch(`${this.config.baseUrl || ''}/api/v1/bridge/listAlertRules`, {
+      method: 'POST',
+      headers: await this.getHeaders(),
+      body: JSON.stringify(input),
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(text || `Bridge error: ${res.status}`);
+    }
+    return res.json();
+  }
+
+  /** Lists incidents for a project. */
+  async listIncidents(input: ListIncidentsInput): Promise<ListIncidentsOutput> {
+    const res = await fetch(`${this.config.baseUrl || ''}/api/v1/bridge/listIncidents`, {
       method: 'POST',
       headers: await this.getHeaders(),
       body: JSON.stringify(input),
@@ -361,6 +613,34 @@ export class BridgeClient {
     return res.json();
   }
 
+  /** Queries alerts trigger history. */
+  async queryAlertsHistory(input: QueryAlertsHistoryInput): Promise<QueryAlertsHistoryOutput> {
+    const res = await fetch(`${this.config.baseUrl || ''}/api/v1/bridge/queryAlertsHistory`, {
+      method: 'POST',
+      headers: await this.getHeaders(),
+      body: JSON.stringify(input),
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(text || `Bridge error: ${res.status}`);
+    }
+    return res.json();
+  }
+
+  /** Queries system audit logs. */
+  async queryAuditLogs(input: QueryAuditLogsInput): Promise<QueryAuditLogsOutput> {
+    const res = await fetch(`${this.config.baseUrl || ''}/api/v1/bridge/queryAuditLogs`, {
+      method: 'POST',
+      headers: await this.getHeaders(),
+      body: JSON.stringify(input),
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(text || `Bridge error: ${res.status}`);
+    }
+    return res.json();
+  }
+
   /** Queries grouped error events. */
   async queryErrors(input: QueryErrorsInput): Promise<QueryErrorsOutput> {
     const res = await fetch(`${this.config.baseUrl || ''}/api/v1/bridge/queryErrors`, {
@@ -403,9 +683,51 @@ export class BridgeClient {
     return res.json();
   }
 
+  /** Saves a dashboard layout configuration. */
+  async saveDashboard(input: SaveDashboardInput): Promise<SaveDashboardOutput> {
+    const res = await fetch(`${this.config.baseUrl || ''}/api/v1/bridge/saveDashboard`, {
+      method: 'POST',
+      headers: await this.getHeaders(),
+      body: JSON.stringify(input),
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(text || `Bridge error: ${res.status}`);
+    }
+    return res.json();
+  }
+
   /** Registers a new user. */
   async signup(input: SignUpInput): Promise<SignUpOutput> {
     const res = await fetch(`${this.config.baseUrl || ''}/api/v1/bridge/signup`, {
+      method: 'POST',
+      headers: await this.getHeaders(),
+      body: JSON.stringify(input),
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(text || `Bridge error: ${res.status}`);
+    }
+    return res.json();
+  }
+
+  /** Toggles an alert rule active state. */
+  async toggleAlertRule(input: ToggleAlertRuleInput): Promise<ToggleAlertRuleOutput> {
+    const res = await fetch(`${this.config.baseUrl || ''}/api/v1/bridge/toggleAlertRule`, {
+      method: 'POST',
+      headers: await this.getHeaders(),
+      body: JSON.stringify(input),
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(text || `Bridge error: ${res.status}`);
+    }
+    return res.json();
+  }
+
+  /** Updates incident status and logs updates. */
+  async updateIncidentStatus(input: UpdateIncidentStatusInput): Promise<UpdateIncidentStatusOutput> {
+    const res = await fetch(`${this.config.baseUrl || ''}/api/v1/bridge/updateIncidentStatus`, {
       method: 'POST',
       headers: await this.getHeaders(),
       body: JSON.stringify(input),

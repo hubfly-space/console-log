@@ -44,6 +44,25 @@ func New(cfg *config.Config, logger *slog.Logger, db *database.DB) http.Handler 
 	bridge.Register(bridgeRegistry, "queryMetrics", apiHandler.QueryMetrics, "Queries metrics data over time.")
 	bridge.Register(bridgeRegistry, "generateDemoData", apiHandler.GenerateDemoData, "Generates demo logs, metrics, and errors.")
 
+	// Alerts RPCs
+	bridge.Register(bridgeRegistry, "createAlertRule", apiHandler.CreateAlertRule, "Creates a new alert rule.")
+	bridge.Register(bridgeRegistry, "listAlertRules", apiHandler.ListAlertRules, "Lists all alert rules for a project.")
+	bridge.Register(bridgeRegistry, "toggleAlertRule", apiHandler.ToggleAlertRule, "Toggles an alert rule active state.")
+	bridge.Register(bridgeRegistry, "deleteAlertRule", apiHandler.DeleteAlertRule, "Deletes an alert rule.")
+	bridge.Register(bridgeRegistry, "queryAlertsHistory", apiHandler.QueryAlertsHistory, "Queries alerts trigger history.")
+
+	// Dashboard Builder RPCs
+	bridge.Register(bridgeRegistry, "saveDashboard", apiHandler.SaveDashboard, "Saves a dashboard layout configuration.")
+	bridge.Register(bridgeRegistry, "getDashboards", apiHandler.GetDashboards, "Gets dashboards for a project.")
+
+	// Incident Management RPCs
+	bridge.Register(bridgeRegistry, "createIncident", apiHandler.CreateIncident, "Creates a new incident.")
+	bridge.Register(bridgeRegistry, "updateIncidentStatus", apiHandler.UpdateIncidentStatus, "Updates incident status and logs updates.")
+	bridge.Register(bridgeRegistry, "listIncidents", apiHandler.ListIncidents, "Lists incidents for a project.")
+
+	// Audit Trail RPCs
+	bridge.Register(bridgeRegistry, "queryAuditLogs", apiHandler.QueryAuditLogs, "Queries system audit logs.")
+
 	// Test/Demo RPCs
 	bridge.Register(bridgeRegistry, "hello", apiHandler.Hello, "Returns a greeting message.")
 
